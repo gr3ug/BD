@@ -147,30 +147,7 @@ GO
      END
      GO
 
-     -- 36.3 nie dziala
-     DROP TRIGGER duplikat_miejsce1;
-    GO
-      
-     CREATE TRIGGER duplikat_miejsce ON miejsce
-     FOR INSERT
-     AS
-     BEGIN
-             DECLARE @id INT, @ulica VARCHAR(20), @numer VARCHAR(8), @miasto VARCHAR(24), @kod CHAR(6)
-             SELECT @id=id_miejsce, @miasto=miasto, @kod=kod, @numer=numer, @ulica=ulica FROM inserted
-            IF @@ROWCOUNT>1
-              BEGIN
-               RAISERROR('Nie mozna dodac wielu jednoczesnie',1,2)
-               ROLLBACK
-              END
-             ELSE IF EXISTS (SELECT * FROM miejsce WHERE (@ulica  IN (SELECT ulica FROM miejsce) AND @miasto IN (SELECT miasto FROM miejsce) AND@kod IN (SELECT kod FROM miejsce)))
-              BEGIN
-               RAISERROR('Istnieje juz takie miejsce',1,2)
-               ROLLBACK
-              END
-     END
-     GO      
-     INSERT INTO miejsce(id_miejsce, ulica, numer, miasto, kod)
-     VALUES (568, 'asdfdas1d', '313k', '2131ba', '8k-2c2');
+     
 
  
 --37.2 
@@ -258,12 +235,12 @@ GO
 
       --39.2
       CREATE VIEW pensja_pracownika AS
-      SELECT id_pracownik, imie, nazwisko, CASE WHEN pensja<1500 THEN 'Ma³a'
-      WHEN pensja>=1500 AND pensja <3000 THEN 'Œrednia'
-      WHEN pensja>=3000 THEN 'Du¿a' END AS zarobki
+      SELECT id_pracownik, imie, nazwisko, CASE WHEN pensja<1500 THEN 'MaÂ³a'
+      WHEN pensja>=1500 AND pensja <3000 THEN 'ÂŒrednia'
+      WHEN pensja>=3000 THEN 'DuÂ¿a' END AS zarobki
       FROM pracownik
       GO
-      SELECT * FROM pensja_pracownika WHERE zarobki='Ma³a'
+      SELECT * FROM pensja_pracownika WHERE zarobki='MaÂ³a'
       SELECT * FROM pracownik WHERE pensja<1500
  
 
