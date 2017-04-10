@@ -1,0 +1,282 @@
+     -- 28.2
+     CREATE TABLE naprawa2(
+      id_naprawa INT IDENTITY(1,1) PRIMARY KEY,
+      data_przyjecia DATETIME CHECK(data_przyjecia<=GETDATE()),
+      opis_usterki VARCHAR(500) NOT NULL CHECK(LEN(opis_usterki)>10),
+      zaliczka MONEY CHECK(zaliczka BETWEEN 100 AND 1000)
+     );
+ 
+     -- 28.3
+     CREATE TABLE wykonanie_naprawy2(
+      id_pracownik INT FOREIGN KEY REFERENCES pracownik2(id_pracownik),
+      id_naprawa INT FOREIGN KEY REFERENCES naprawa2(id_naprawa),
+      data_naprawy DATETIME DEFAULT GETDATE(),
+      opis_naprawy VARCHAR(500) NOT NULL,
+      cena MONEY
+     );
+
+	--29.2 
+     CREATE TABLE dostawca2(id_dostawca INT IDENTITY(1,1) PRIMARY KEY, nazwa VARCHAR(30));
+     CREATE TABLE towar2(id_towar INT IDENTITY(1,1) PRIMARY KEY, kod_kreskowy INT, id_dostawca INT);
+     ALTER TABLE dostawca2 ADD CONSTRAINT unikatowa_nazwa UNIQUE (nazwa);    
+     ALTER TABLE towar2 ADD nazwa VARCHAR(500) NOT NULL;
+     ALTER TABLE towar2 ADD CONSTRAINT unikatowy_kod_kreskowy UNIQUE (kod_kreskowy);
+     ALTER TABLE towar2 ADD CONSTRAINT id_dostawca FOREIGN KEY (id_dostawca) REFERENCES dostawca2(id_dostawca);
+
+	     -- 29.3
+     CREATE TABLE kraj2(id_kraj INT IDENTITY(1,1) PRIMARY KEY, nazwa VARCHAR(30));
+     CREATE TABLE gatunek2(id_gatunek INT IDENTITY(1,1) PRIMARY KEY, nazwa VARCHAR(30));
+     CREATE TABLE zwierze2(id_zwierze INT IDENTITY(1,1) PRIMARY KEY, id_gatunek INT, id_kraj INT, cena MONEY);
+     ALTER TABLE kraj2 ALTER COLUMN nazwa VARCHAR(20) NOT NULL;
+     ALTER TABLE gatunek2 ALTER COLUMN nazwa VARCHAR(20) NOT NULL;
+     ALTER TABLE zwierze2 ADD CONSTRAINT id_gatunek FOREIGN KEY (id_gatunek) REFERENCES gatunek2(id_gatunek);
+     ALTER TABLE zwierze2 ADD CONSTRAINT id_kraj FOREIGN KEY (id_kraj) REFERENCES kraj2(id_kraj);
+      
+
+	--30.2     
+     CREATE TABLE osoba2(id_osoba
+      INT, imie VARCHAR(15), imie2 VARCHAR(15) );
+      ALTER TABLE osoba2 DROP COLUMN imie2;
+
+	--30.3 
+     CREATE TABLE uczen2(id_uczen INT PRIMARY KEY, imie VARCHAR(15), nazwisko VARCHAR(20)
+     CONSTRAINT uczen_nazwisko_unique UNIQUE);  
+     ALTER TABLE uczen2 DROP CONSTRAINT uczen_nazwisko_unique;
+
+    
+	--31.2 
+     CREATE TABLE film2(id_film INT PRIMARY KEY,tytul VARCHAR(50) NOT NULL);
+     CREATE TABLE gatunek2(id_gatunek INT PRIMARY KEY,nazwa VARCHAR(50) NOTNULL);
+     CREATE TABLE film2_gatunek2(id_film INT,id_gatunek INT,PRIMARY KEY(id_film,id_gatunek));
+     ALTER TABLE film2_gatunek2 ADD CONSTRAINTid_film FOREIGN KEY (id_film) REFERENCES film2(id_film) ON DELETE CASCADE;
+     ALTER TABLE film2_gatunek2 ADD CONSTRAINT id_gatunek FOREIGN KEY(id_gatunek) REFERENCES gatunek2(id_gatunek);
+
+
+     --31.3
+      
+     CREATE TABLE stanowisko2 (id_stanowisko INT PRIMARY KEY, nazwa VARCHAR(30));
+     CREATE TABLE pracownik2(id_pracownik INT PRIMARY KEY,id_stanowisko INT, nazwisko VARCHAR(20));
+     ALTER TABLE pracownik2 ADD CONSTRAINT klucz_obcy_id_stanowisko FOREIGN KEY (id_stanowisko)REFERENCES stanowisko2(id_stanowisko) ON DELETE SET NULL ON UPDATE CASCADE;
+
+
+
+-- 32.2
+CREATE PROCEDURE zwieksz_pensje @id INT, @kwota INT
+AS
+UPDATE pracownik SET pensja=pensja+@kwota WHERE id_pracownik=@id;
+GO
+EXECUTE zwieksz_pensje 1, 1000;
+
+-- 32.3
+CREATE PROCEDURE dodaj_klienta @id_klient INT, @imie VARCHAR(15), @nazwisko VARCHAR(20),
+@ulica VARCHAR(24), @numer VARCHAR(8), @miasto VARCHAR(24), @kod CHAR(6)
+AS
+INSERT INTO klient (id_klient, imie, nazwisko, ulica, numer, miasto, kod)
+VALUES (@id_klient, @imie, @nazwisko, @ulica, @numer, @miasto, @kod);
+GO
+EXECUTE dodaj_klienta 21, 'Kacper', 'Naroznik', 'dluga', '3', 'Poznan', '82-112';
+
+
+-- 33.2
+CREATE FUNCTION dbo.ile_wypozyczen (
+@data_od DATETIME,
+@data_do DATETIME
+) RETURNS INT
+BEGIN
+RETURN (SELECT COUNT(*) FROM wypozyczenie
+WHERE @data_od <= data_wyp AND @data_do >= data_wyp)
+END;
+GO
+SELECT dbo.ile_wypozyczen('2000-01-01', '2000-12-31') AS ile_wypozyczen;
+
+-- 33.3
+DROP FUNCTION dbo.roznica_pensji;
+CREATE FUNCTION dbo.roznica_pensji () RETURNS DECIMAL(8,2)
+BEGIN
+DECLARE @max DECIMAL(8,2), @min DECIMAL(8,2);
+SET @max = (SELECT MAX(pensja) FROM pracownik);
+SET @min = (SELECT MIN(pensja) FROM pracownik);
+RETURN @max-@min
+END;
+GO
+SELECT dbo.roznica_pensji() AS roznica_pensji;
+
+-- 34.2
+CREATE VIEW samochod_raport
+AS
+SELECT k.id_samochod, k.marka, k.typ, COUNT(w.id_samochod) AS "ilosc_wyp"
+FROM samochod k LEFT JOIN wypozyczenie w ON k.id_samochod=w.id_samochod
+GROUP BY k.id_samochod, k.marka, k.typ;
+GO
+SELECT * FROM samochod_raport ORDER BY ilosc_wyp DESC;
+
+-- 34.3
+CREATE VIEW pracownik_raport
+AS
+SELECT k.id_pracownik, k.imie, k.nazwisko, COUNT(w.id_pracow_wyp) AS "ilosc_wyp"
+FROM pracownik k LEFT JOIN wypozyczenie w ON k.id_pracownik=w.id_pracow_wyp
+GROUP BY k.id_pracownik, k.imie, k.nazwisko;
+GO
+SELECT * FROM pracownik_raport
+WHERE ilosc_wyp > (SELECT AVG(ilosc_wyp) FROM pracownik_raport);
+
+-- 35.2
+CREATE CLUSTERED INDEX index_klient_nazwa ON klient(nazwisko, imie);
+GO
+ 
+
+-- 35.3
+CREATE INDEX index_samochod_typ ON samochod(marka, typ);
+GO
+ 
+
+
+     -- 36.2
+     CREATE TRIGGER pracownk_ins ON pracownik
+     AFTER INSERT
+     AS
+     BEGIN
+     DECLARE @pensja MONEY
+     SET @pensja ='-1'
+     SELECT @pensja =pensja FROM inserted WHERE pensja=0
+     IF @pensja=0
+     BEGIN      
+     RAISERROR('Pensja musi byc > 0',1,2)
+     ROLLBACK      
+     END
+     END
+     GO
+
+     -- 36.3 nie dziala
+     DROP TRIGGER duplikat_miejsce1;
+    GO
+      
+     CREATE TRIGGER duplikat_miejsce ON miejsce
+     FOR INSERT
+     AS
+     BEGIN
+             DECLARE @id INT, @ulica VARCHAR(20), @numer VARCHAR(8), @miasto VARCHAR(24), @kod CHAR(6)
+             SELECT @id=id_miejsce, @miasto=miasto, @kod=kod, @numer=numer, @ulica=ulica FROM inserted
+            IF @@ROWCOUNT>1
+              BEGIN
+               RAISERROR('Nie mozna dodac wielu jednoczesnie',1,2)
+               ROLLBACK
+              END
+             ELSE IF EXISTS (SELECT * FROM miejsce WHERE (@ulica  IN (SELECT ulica FROM miejsce) AND @miasto IN (SELECT miasto FROM miejsce) AND@kod IN (SELECT kod FROM miejsce)))
+              BEGIN
+               RAISERROR('Istnieje juz takie miejsce',1,2)
+               ROLLBACK
+              END
+     END
+     GO      
+     INSERT INTO miejsce(id_miejsce, ulica, numer, miasto, kod)
+     VALUES (568, 'asdfdas1d', '313k', '2131ba', '8k-2c2');
+
+ 
+--37.2 
+ 
+     CREATE TRIGGER usun_miejsce_i_wypozyczenia ON miejsce
+     INSTEAD OF DELETE AS
+     BEGIN
+     IF @@ROWCOUNT > 1
+     BEGIN
+     PRINT 'Nie mozna usunac kilku';
+     END
+     ELSE
+     BEGIN
+     DELETE FROM wypozyczenie WHERE id_miejsca_wyp IN(SELECT id_miejsce FROM deleted)
+     OR id_miejsca_odd IN(SELECT id_miejsce FROM deleted);
+     DELETE FROM miejsce WHERE id_miejsce IN(SELECT id_miejsce FROM deleted)
+     END
+     END
+     GO
+
+     -- 37.3
+     CREATE TRIGGER samochod_blokada ON samochod
+     INSTEAD OF DELETE, UPDATE, INSERT AS
+     BEGIN
+            DECLARE @cnt INT = @@ROWCOUNT
+             WHILE @cnt > 0
+             BEGIN
+                     RAISERROR('Blad', 1, 2)
+                     ROLLBACK
+                     SET @cnt=@cnt-1
+             END
+     END
+     GO
+
+
+      --38.2
+      CREATE TABLE samochod_delete(
+      id_samochod INT PRIMARY KEY,
+      marka VARCHAR(20) NOT NULL,
+      typ VARCHAR(16) NOT NULL,
+      data_prod DATETIME NOT NULL,
+      kolor VARCHAR(16) NOT NULL,
+      poj_silnika SMALLINT NOT NULL,
+      przebieg INTEGER NOT NULL
+     );
+     CREATE TRIGGER samochod_przenies ON samochod
+     FOR DELETE
+     AS BEGIN
+     DECLARE kursor_przenies CURSOR
+     FOR SELECT * FROM deleted;
+     OPEN kursor_przenies
+     DECLARE @id INT, @marka VARCHAR(20), @typ VARCHAR(16), @data_prod DATETIME, @kolor VARCHAR(16), @poj_silnika SMALLINT, @przebieg INTEGER
+     FETCH NEXT FROM kursor_przenies INTO @id, @marka, @typ, @data_prod, @kolor, @poj_silnika, @przebieg
+     WHILE @@FETCH_STATUS=0
+     BEGIN
+     INSERT INTO samochod_delete(id_samochod, marka, typ, data_prod, kolor, poj_silnika, przebieg) VALUES
+     (@id, @marka, @typ, @data_prod, @kolor, @poj_silnika, @przebieg);
+     FETCH NEXT FROM kursor_przenies INTO @id, @marka, @typ, @data_prod, @kolor, @poj_silnika, @przebieg
+     END
+     CLOSE kursor_przenies
+     DEALLOCATE kursor_przenies
+     END
+     GO
+--38.3 
+      CREATE TRIGGER zero_dodatku ON pracownik
+      AFTER UPDATE
+      AS BEGIN
+      DECLARE @id INT, @pensja DECIMAL(8,2)
+      DECLARE kursor_pensja CURSOR FOR SELECT id_pracownik, pensja FROM inserted;
+      OPEN kursor_pensja
+      FETCH NEXT FROM kursor_pensja INTO @id, @pensja
+      WHILE @@FETCH_STATUS=0
+      BEGIN
+     IF @pensja > (SELECT pensja FROM deleted WHERE id_pracownik=@id)
+     BEGIN
+     UPDATE pracownik
+     SET dodatek=0 WHERE id_pracownik=@id;
+     END
+     FETCH NEXT FROM kursor_pensja INTO @id, @pensja
+     END
+     CLOSE kursor_pensja
+     DEALLOCATE kursor_pensja
+     END
+     GO
+
+      --39.2
+      CREATE VIEW pensja_pracownika AS
+      SELECT id_pracownik, imie, nazwisko, CASE WHEN pensja<1500 THEN 'Ma³a'
+      WHEN pensja>=1500 AND pensja <3000 THEN 'Œrednia'
+      WHEN pensja>=3000 THEN 'Du¿a' END AS zarobki
+      FROM pracownik
+      GO
+      SELECT * FROM pensja_pracownika WHERE zarobki='Ma³a'
+      SELECT * FROM pracownik WHERE pensja<1500
+ 
+
+      --39.3
+      CREATE VIEW pracownik_informacje AS
+      SELECT p.id_pracownik, p.imie, p.nazwisko,
+      DATEDIFF(YEAR, p.data_zatr, GETDATE()) AS staz_pracy,
+      COUNT(w.id_pracow_wyp) AS wypozyczenia,
+      CASE WHEN p.dodatek>0 THEN 'Tak'
+      WHEN p.dodatek=0 THEN 'Nie'
+      ELSE 'Brak' END AS dodatek
+     FROM pracownik p LEFT JOIN wypozyczenie w ON p.id_pracownik=w.id_pracow_wyp
+     GROUP BY p.id_pracownik,p.imie,p.nazwisko, p.data_zatr, p.dodatek
+     GO
+     SELECT * FROM pracownik_informacje WHERE dodatek='Tak'
+     SELECT * FROM pracownik WHERE id_pracownik=1
